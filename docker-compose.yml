@@ -23,6 +23,15 @@ services:
             /build_as_user.sh installSomeSw && \
             /build_as_user.sh installMoreSw
 
+        RUN sudo apt install -y wine-stable
+        RUN sudo dpkg --add-architecture i386 && sudo apt-get update
+        RUN sudo apt install -y wine32:i386
+        RUN sudo apt install -y winbind
+        RUN sudo apt install -y mesa-utils
+        RUN sudo apt install -y pulseaudio-utils
+        RUN sudo usermod -a -G video ${ARG_UNAME}
+        RUN sudo apt install -y libnvidia-gl-580:i386
+
         USER root
         COPY .assets/supervisord.conf /etc/
         ENTRYPOINT ["/bin/bash", "-c", "env | grep -vE 'PATH|HOSTNAME|PWD|HOME|SHLVL|^_=' >> /etc/environment; mkdir -p /run/user/${ARG_UID} && chmod 700 /run/user/${ARG_UID} && chown ${ARG_UID}:${ARG_GID} /run/user/${ARG_UID}; exec /usr/bin/supervisord -n -c /etc/supervisord.conf"]
@@ -58,14 +67,14 @@ services:
       driver: json-file
       options:
         max-size: "100m"
-    #privileged: true
-    #deploy:
-    #  resources:
-    #    reservations:
-    #      devices:
-    #        - driver: nvidia
-    #          count: all # 1 # alternatively, use `count: all` for all GPUs
-    #          capabilities: [gpu, graphics, video, compute, utility, display]
+    privileged: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # 1 # alternatively, use `count: all` for all GPUs
+              capabilities: [gpu, graphics, video, compute, utility, display]
 
 volumes:
   homeuser:

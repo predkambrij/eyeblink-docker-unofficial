@@ -1,3 +1,67 @@
+# Unofficial project
+This repository provides Docker and Wine scripts to run the Eyeblink Windows application on Linux.
+It is **not affiliated with, endorsed by, or maintained by Blinking Matters**.
+
+This repository is built on top of [devcontainer](https://github.com/predkambrij/devcontainer).
+
+## Commands
+Start Docker container:
+```bash
+.assets/gen_env.sh
+docker compose up -d --build
+.assets/ssh.sh # by default password equal to the username
+```
+
+SSH session:
+```bash
+winecfg # then just click OK
+wine reg add 'HKCU\Software\Wine\Explorer\Desktops' /v Default /d 3840x2160 /f # change for your resolution
+wget https://www.blinkingmatters.com/files/download/eyeblink_setup.exe
+wine eyeblink_setup.exe # Next, Next, Install, uncheck "Run eyeblink", Finish.
+
+# Test it out (configure camera, reminder position, and other settings)
+# Important: disable "Screen control", otherwise it won't find camera on 2nd loop (error: "0190:err:ole:CoUninitialize Mismatched CoUninitialize")
+wine '.wine/drive_c/Program Files/Andrej Fogelton/eyeblink/eyeblink.exe'
+```
+
+Exit eyeblink, exit the SSH session. Add the following to `.assets/supervisord.conf`:
+```
+[program:eyeblink]
+user=%(ENV_ARG_UNAME)s
+directory=/home/%(ENV_ARG_UNAME)s
+environment=HOME="/home/%(ENV_ARG_UNAME)s"
+command = wine '.wine/drive_c/Program Files/Andrej Fogelton/eyeblink/eyeblink.exe'
+autostart=true
+autorestart=true
+priority=1
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+```
+
+Run and the program should start (with autorestart if it crashes).
+```bash
+docker compose up -d --build --force-recreate
+```
+
+To see eyeblink's logs:
+```bash
+docker compose logs -f
+```
+
+App logs:
+```bash
+tail -f ~/.wine/drive_c/users/$USER/AppData/Local/eyeblink/logs/$(ls -t ~/.wine/drive_c/users/$USER/AppData/Local/eyeblink/logs/ | head -n 1)
+```
+
+# Known limitations
+- Browser links won't work, since the program is running in a Docker container. This repo is testing out what steps are required to make the program work. It's more convenient to run it outside the Docker container.
+- The program is using lots of CPU (probably because GPU acceleration is not working correctly).
+- if camera gets reconnected you need to restart te docker container
+
+---
+# DevContainer README.md
 # Description
 This repository contains scripts that makes it easy to start working on random projects without installing a bunch of dependencies on the host computer.
 
